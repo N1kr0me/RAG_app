@@ -1,0 +1,12 @@
+{
+    "embedding": {
+        "model": "text-embedding-3-small",
+        "api_key": "your-api-key-here"
+    },
+    "vector_store": {
+        "path": "data/vector_store"
+    },
+    "documents": {
+        "path": "data/documents"
+    }
+} 
