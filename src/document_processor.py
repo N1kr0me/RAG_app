@@ -6,9 +6,16 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.schema.document import Document
 from langchain.vectorstores.chroma import Chroma
 from .embeddings import get_embedding_function, load_config
+from pypdf import PdfReader
 
 class DocumentProcessor:
-    def __init__(self):
+    def __init__(self, chunk_size: int = 1000, chunk_overlap: int = 200):
+        self.text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+            length_function=len,
+            is_separator_regex=False
+        )
         self.config = load_config()
         self.documents_path = Path(self.config["documents"]["path"])
         self.vector_store_path = Path(self.config["vector_store"]["path"])
@@ -88,3 +95,25 @@ class DocumentProcessor:
             chunk.metadata["id"] = chunk_id
             
         return chunks 
+
+    def process_pdf(self, pdf_path: Path) -> List[str]:
+        """Process a PDF file and return chunks of text."""
+        try:
+            reader = PdfReader(pdf_path)
+            text = ""
+            for page in reader.pages:
+                text += page.extract_text() + "\n"
+            
+            chunks = self.text_splitter.split_text(text)
+            return chunks
+        except Exception as e:
+            print(f"Error processing PDF {pdf_path}: {str(e)}")
+            return []
+
+    def process_directory(self, directory: Path) -> List[str]:
+        """Process all PDF files in a directory."""
+        all_chunks = []
+        for pdf_file in directory.glob("*.pdf"):
+            chunks = self.process_pdf(pdf_file)
+            all_chunks.extend(chunks)
+        return all_chunks 

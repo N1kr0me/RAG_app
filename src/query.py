@@ -1,34 +1,40 @@
+from typing import List, Dict, Any
 from pathlib import Path
-from typing import List
-from langchain.vectorstores.chroma import Chroma
-from langchain.schema.document import Document
-from .embeddings import get_embedding_function, load_config
+from .embeddings import load_vector_store, load_config
 
-class RAGQuery:
+class QueryEngine:
     def __init__(self):
         self.config = load_config()
-        self.vector_store_path = Path(self.config["vector_store"]["path"])
-        self.db = Chroma(
-            persist_directory=str(self.vector_store_path),
-            embedding_function=get_embedding_function()
+        self.vector_store = load_vector_store(
+            persist_directory=self.config["vector_store"]["path"]
         )
-        
-    def query(self, query_text: str, k: int = 4) -> List[Document]:
+
+    def query(self, query_text: str, k: int = 4) -> List[Dict[str, Any]]:
         """
         Query the vector store for relevant documents.
         
         Args:
             query_text: The query text
-            k: Number of documents to retrieve
+            k: Number of results to return
             
         Returns:
-            List of relevant documents
+            List of dictionaries containing document chunks and their metadata
         """
-        if not self.vector_store_path.exists():
-            raise FileNotFoundError("Vector store not found. Please process documents first.")
+        results = self.vector_store.similarity_search_with_score(
+            query_text,
+            k=k
+        )
+        
+        formatted_results = []
+        for doc, score in results:
+            formatted_results.append({
+                "content": doc.page_content,
+                "metadata": doc.metadata,
+                "score": score
+            })
             
-        return self.db.similarity_search(query_text, k=k)
-    
+        return formatted_results
+
     def get_relevant_context(self, query_text: str, k: int = 4) -> str:
         """
         Get relevant context from documents for a query.
@@ -41,4 +47,4 @@ class RAGQuery:
             Combined context from relevant documents
         """
         docs = self.query(query_text, k=k)
-        return "\n\n".join(doc.page_content for doc in docs) 
+        return "\n\n".join(doc["content"] for doc in docs) 
