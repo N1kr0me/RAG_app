@@ -34,11 +34,18 @@ def process_documents():
     create_vector_store(chunks, str(vector_store_path))
     print("Vector store created successfully!")
 
-def query_documents(query_text: str):
+def query_documents(query_text: str, chat_mode: bool = False):
     """Query the vector store."""
     try:
         engine = QueryEngine()
         results = engine.query(query_text)
+        
+        if chat_mode:
+            print("\nRelevant context found:")
+            context = engine.get_relevant_context(query_text)
+            print(context)
+            print("\n---")
+            return context
         
         print("\nRelevant documents found:")
         for i, result in enumerate(results, 1):
@@ -50,6 +57,29 @@ def query_documents(query_text: str):
         print(f"Error: {str(e)}")
         print("Please process documents first using: python -m src.cli process")
 
+def chat_mode():
+    """Interactive chat mode."""
+    print("Entering chat mode. Type 'exit' to quit.")
+    print("Type your questions and press Enter to get answers.")
+    print("---")
+    
+    while True:
+        try:
+            query = input("\nYou: ").strip()
+            if query.lower() in ['exit', 'quit', 'q']:
+                break
+                
+            if not query:
+                continue
+                
+            query_documents(query, chat_mode=True)
+            
+        except KeyboardInterrupt:
+            print("\nExiting chat mode...")
+            break
+        except Exception as e:
+            print(f"Error: {str(e)}")
+
 def main():
     parser = argparse.ArgumentParser(description="RAG System CLI")
     subparsers = parser.add_subparsers(dest="command", help="Command to execute")
@@ -60,13 +90,19 @@ def main():
     # Query command
     query_parser = subparsers.add_parser("query", help="Query the system")
     query_parser.add_argument("text", help="Query text")
+    query_parser.add_argument("--chat", action="store_true", help="Enable chat mode")
+    
+    # Chat command
+    chat_parser = subparsers.add_parser("chat", help="Start interactive chat mode")
     
     args = parser.parse_args()
     
     if args.command == "process":
         process_documents()
     elif args.command == "query":
-        query_documents(args.text)
+        query_documents(args.text, args.chat)
+    elif args.command == "chat":
+        chat_mode()
     else:
         parser.print_help()
 

@@ -13,40 +13,14 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-        
-    - name: Install dependencies
+    - name: Set up Docker
+      uses: docker/setup-buildx-action@v1
+      
+    - name: Build and run with Docker Compose
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.mcp.txt
-        
-    - name: Install Ollama
-      run: |
-        curl -fsSL https://ollama.com/install.sh | sh
-        # Set Ollama to use the GitHub Actions workspace
-        export OLLAMA_MODELS=$GITHUB_WORKSPACE/ollama_models
-        mkdir -p $OLLAMA_MODELS
-        # Add Ollama to PATH
-        echo "$HOME/.ollama" >> $GITHUB_PATH
-        
-    - name: Pull Ollama model
-      run: |
-        ollama pull phi:2.7b
-        
-    - name: Process documents
-      run: |
-        python -m src.cli process
-        
-    - name: Start MCP server
-      run: |
-        python -m src.mcp_server &
-        
-    - name: Wait for server
-      run: |
-        sleep 10
+        docker-compose up -d
+        # Wait for services to be healthy
+        timeout 60 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:8000/health)" != "200" ]]; do sleep 5; done'
         
     - name: Test API
       run: |
@@ -54,6 +28,11 @@ jobs:
           -H "Content-Type: application/json" \
           -d '{"query": "test query"}'
           
+    - name: Check service logs
+      if: failure()
+      run: |
+        docker-compose logs
+        
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:
