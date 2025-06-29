@@ -1,18 +1,23 @@
+import os
+import logging
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import httpx
-import os
 from typing import List, Optional
 from .query import QueryEngine
 from .document_processor import DocumentProcessor
+import openai
 
-app = FastAPI()
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = FastAPI(title="RAG Chatbot Server", version="2.0.0")
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -22,6 +27,9 @@ app.add_middleware(
 query_engine = QueryEngine()
 document_processor = DocumentProcessor()
 
+openai.api_key = os.getenv("OPENAI_API_KEY")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+
 class QueryRequest(BaseModel):
     query: str
     chat_history: Optional[List[dict]] = None
@@ -29,20 +37,37 @@ class QueryRequest(BaseModel):
 class ProcessRequest(BaseModel):
     reset: bool = False
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "healthy", "service": "rag-chatbot-server"}
+
+@app.get("/")
+async def root():
+    """Root endpoint with server information"""
+    return {
+        "message": "RAG Chatbot Server is running",
+        "version": "2.0.0",
+        "endpoints": {
+            "health": "/health",
+            "query": "/query",
+            "process": "/process"
+        }
+    }
+
 @app.post("/query")
 async def query(request: QueryRequest):
+    """Query the RAG system with context from documents using OpenAI API"""
     try:
-        # Get relevant documents
+        logger.info(f"Processing query: {request.query[:50]}...")
         results = query_engine.query(request.query)
-        
-        # Prepare context for Ollama
+        logger.info(f"Found {len(results)} relevant document chunks")
         context = "\n\n".join([r["content"] for r in results])
-        
-        # Prepare messages for Ollama
+
+        # Prepare messages for OpenAI
         messages = []
         if request.chat_history:
             messages.extend(request.chat_history)
-        
         messages.append({
             "role": "system",
             "content": f"Use the following context to answer the question. If you cannot find the answer in the context, say so.\n\nContext:\n{context}"
@@ -51,53 +76,48 @@ async def query(request: QueryRequest):
             "role": "user",
             "content": request.query
         })
-        
-        # Call Ollama API
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"http://{os.getenv('OLLAMA_HOST', 'localhost')}:{os.getenv('OLLAMA_PORT', '11434')}/api/chat",
-                json={
-                    "model": "phi:2.7b",
-                    "messages": messages,
-                    "stream": False
-                }
-            )
-            
-            if response.status_code != 200:
-                raise HTTPException(status_code=500, detail="Error calling Ollama API")
-            
-            ollama_response = response.json()
-            
+
+        # Call OpenAI ChatCompletion
+        response = openai.ChatCompletion.create(
+            model=OPENAI_MODEL,
+            messages=messages,
+            temperature=0.2,
+            max_tokens=512
+        )
+        answer = response["choices"][0]["message"]["content"]
+        logger.info("Successfully generated response from OpenAI")
         return {
-            "answer": ollama_response["message"]["content"],
-            "sources": results
+            "answer": answer,
+            "sources": results,
+            "query": request.query,
+            "context_length": len(context)
         }
-        
     except Exception as e:
+        logger.error(f"Query processing failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/process")
 async def process_documents(request: ProcessRequest):
+    """Process documents in the data/documents directory"""
     try:
-        # Process documents
+        logger.info("Starting document processing...")
         chunks = document_processor.process_directory()
-        
         if not chunks:
-            return {"message": "No documents found or processed"}
-        
-        # Create vector store
+            logger.warning("No documents found or processed")
+            return {"message": "No documents found or processed", "chunks": 0}
         from .embeddings import create_vector_store, load_config
         config = load_config()
         create_vector_store(chunks, config["vector_store"]["path"])
-        
+        logger.info(f"Successfully processed {len(chunks)} chunks")
         return {
             "message": f"Successfully processed {len(chunks)} chunks",
             "chunks": len(chunks)
         }
-        
     except Exception as e:
+        logger.error(f"Document processing failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
+    logger.info("Starting RAG Chatbot Server...")
     uvicorn.run(app, host="0.0.0.0", port=8000) 

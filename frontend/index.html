@@ -1,9 +1,13 @@
+<!--
+Primitive Chatbot UI for RAG Chatbot Backend
+Set BACKEND_URL to your deployed Render backend URL (e.g., https://rag-chatbot-backend.onrender.com)
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ask About Nikhil</title>
+    <title>RAG Chatbot Demo</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -140,10 +144,13 @@
     </div>
 
     <script>
+        // Set this to your deployed backend URL
+        const BACKEND_URL = "https://rag-chatbot-backend.onrender.com";
         const chatContainer = document.getElementById('chatContainer');
         const queryInput = document.getElementById('query');
         const submitBtn = document.getElementById('submitBtn');
         const typingIndicator = document.getElementById('typingIndicator');
+        let chatHistory = [];
 
         function handleKeyPress(event) {
             if (event.key === 'Enter' && !event.shiftKey) {
@@ -178,16 +185,17 @@
             queryInput.style.height = 'auto';
 
             try {
-                const response = await fetch('http://localhost:8000/query', {
+                const res = await fetch(BACKEND_URL + '/query', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ query: query })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query, chat_history: chatHistory })
                 });
-                
-                const data = await response.json();
-                addMessage(data.response || 'No response received');
+                if (!res.ok) throw new Error('Server error');
+                const data = await res.json();
+                addMessage(data.answer);
+                // Add to chat history for context
+                chatHistory.push({ role: 'user', content: query });
+                chatHistory.push({ role: 'assistant', content: data.answer });
             } catch (error) {
                 addMessage('Error: ' + error.message);
             } finally {
