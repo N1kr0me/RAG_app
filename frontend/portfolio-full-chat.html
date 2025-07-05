@@ -527,6 +527,11 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
+            // Reset chat history on page load
+            chatHistory = [];
+            isChatMode = false;
+            isMinimized = false;
+            
             preventZoom();
             handleMobileKeyboard();
         });
@@ -576,10 +581,29 @@
             }
         }
 
+        function resetChat() {
+            // Reset chat history and interface
+            chatHistory = [];
+            isChatMode = false;
+            
+            // Clear chat container
+            document.getElementById('chatContainer').innerHTML = '';
+            
+            // Reset to welcome screen
+            document.getElementById('chatContent').classList.remove('chat-mode');
+            document.getElementById('chatInputGroup').style.display = 'none';
+            document.getElementById('queryInput').value = '';
+            document.getElementById('chatInput').value = '';
+            document.getElementById('typingIndicator').style.display = 'none';
+        }
+
         function startChat() {
             const query = document.getElementById('queryInput').value.trim();
             if (!query) return;
 
+            // Reset chat history for new session
+            chatHistory = [];
+            
             // Switch to chat mode
             document.getElementById('chatContent').classList.add('chat-mode');
             document.getElementById('chatInputGroup').style.display = 'flex';
@@ -703,6 +727,7 @@
             startChat,
             sendMessage,
             addMessage,
+            resetChat,
             isMinimized: () => isMinimized,
             isChatMode: () => isChatMode
         };

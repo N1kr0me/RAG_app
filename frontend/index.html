@@ -457,6 +457,9 @@
             const query = document.getElementById('queryInput').value.trim();
             if (!query) return;
 
+            // Reset chat history for new session
+            chatHistory = [];
+            
             // Switch to chat mode
             document.getElementById('mainContainer').classList.add('chat-mode');
             document.getElementById('chatInputGroup').style.display = 'flex';
@@ -566,6 +569,10 @@
 
         // Initialize mobile optimizations
         document.addEventListener('DOMContentLoaded', function() {
+            // Reset chat history on page load
+            chatHistory = [];
+            isChatMode = false;
+            
             preventZoom();
             handleMobileKeyboard();
         });
