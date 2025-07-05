@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from .query import QueryEngine
 from .document_processor import DocumentProcessor
-import openai
+from openai import OpenAI
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -27,7 +27,8 @@ app.add_middleware(
 query_engine = QueryEngine()
 document_processor = DocumentProcessor()
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# Initialize OpenAI client
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
 
 class QueryRequest(BaseModel):
@@ -77,14 +78,14 @@ async def query(request: QueryRequest):
             "content": request.query
         })
 
-        # Call OpenAI ChatCompletion
-        response = openai.ChatCompletion.create(
+        # Call OpenAI using new API
+        response = client.chat.completions.create(
             model=OPENAI_MODEL,
             messages=messages,
             temperature=0.2,
             max_tokens=512
         )
-        answer = response["choices"][0]["message"]["content"]
+        answer = response.choices[0].message.content
         logger.info("Successfully generated response from OpenAI")
         return {
             "answer": answer,
