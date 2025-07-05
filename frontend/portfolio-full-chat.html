@@ -5,33 +5,105 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="theme-color" content="#667eea">
-    <title>Nikhil's AI Assistant</title>
+    <title>Nikhil's AI Assistant - Full Chat</title>
     <style>
         * {
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
         }
 
-        body {
+        /* Full Chat Container */
+        .full-chat-container {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            margin: 0;
-            padding: 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
-            height: 100vh;
-            height: 100dvh; /* Dynamic viewport height for mobile */
             display: flex;
             align-items: center;
             justify-content: center;
+            z-index: 10000;
             transition: all 0.5s ease;
             overflow: hidden;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
 
-        .container {
+        /* Minimized State */
+        .full-chat-container.minimized {
+            top: auto;
+            left: auto;
+            right: 20px;
+            bottom: 20px;
+            width: 350px;
+            height: 60px;
+            border-radius: 15px;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .full-chat-container.minimized .chat-content {
+            display: none;
+        }
+
+        .full-chat-container.minimized .minimize-header {
+            display: flex;
+        }
+
+        /* Minimize Header */
+        .minimize-header {
+            display: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 15px;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+            height: 100%;
+        }
+
+        .minimize-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .minimize-header h3::before {
+            content: '🤖';
+            font-size: 18px;
+        }
+
+        .minimize-toggle {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .minimize-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        /* Chat Content */
+        .chat-content {
             background: white;
             padding: 40px;
             border-radius: 20px;
@@ -41,19 +113,38 @@
             width: 90%;
             transition: all 0.5s ease;
             position: relative;
+            display: flex;
+            flex-direction: column;
+            height: 90vh;
+            max-height: 600px;
         }
 
-        .container.chat-mode {
+        /* Chat Mode */
+        .chat-content.chat-mode {
             max-width: 100%;
             width: 100%;
             height: 100vh;
             height: 100dvh;
             padding: 0;
             border-radius: 0;
-            display: flex;
-            flex-direction: column;
             text-align: left;
             box-shadow: none;
+            max-height: none;
+        }
+
+        /* Welcome Screen */
+        .welcome-screen {
+            transition: opacity 0.5s ease;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .chat-mode .welcome-screen {
+            opacity: 0;
+            pointer-events: none;
+            display: none;
         }
 
         h1 {
@@ -99,12 +190,12 @@
             padding: 15px;
             border: 2px solid #e1e5e9;
             border-radius: 10px;
-            font-size: 16px; /* Prevents zoom on iOS */
+            font-size: 16px;
             transition: border-color 0.3s ease;
             background: white;
             -webkit-appearance: none;
             appearance: none;
-            min-height: 50px; /* Better touch target */
+            min-height: 50px;
         }
 
         input[type="text"]:focus {
@@ -123,7 +214,7 @@
             font-weight: 600;
             cursor: pointer;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
-            min-height: 50px; /* Better touch target */
+            min-height: 50px;
             min-width: 80px;
             -webkit-appearance: none;
             appearance: none;
@@ -147,14 +238,14 @@
             }
         }
 
-        /* Chat Interface Styles */
+        /* Chat Interface */
         .chat-container {
             display: none;
             flex: 1;
             overflow-y: auto;
             margin-bottom: 0;
             padding: 10px;
-            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            -webkit-overflow-scrolling: touch;
         }
 
         .chat-mode .chat-container {
@@ -210,21 +301,19 @@
             border-left: 3px solid #667eea;
         }
 
-        .welcome-screen {
-            transition: opacity 0.5s ease;
-        }
-
-        .chat-mode .welcome-screen {
-            opacity: 0;
+        /* Loading State */
+        .loading {
+            opacity: 0.7;
             pointer-events: none;
         }
 
-        /* Mobile Responsive Design */
+        /* Mobile Responsive */
         @media (max-width: 768px) {
-            .container {
+            .chat-content {
                 padding: 20px;
                 width: 95%;
                 max-width: none;
+                height: 95vh;
             }
 
             h1 {
@@ -268,14 +357,21 @@
             .chat-container {
                 padding: 8px 12px;
             }
+
+            .full-chat-container.minimized {
+                width: calc(100vw - 40px);
+                right: 20px;
+                left: 20px;
+            }
         }
 
         /* Small Mobile Devices */
         @media (max-width: 480px) {
-            .container {
+            .chat-content {
                 padding: 15px;
                 width: 100%;
                 border-radius: 0;
+                height: 100vh;
             }
 
             h1 {
@@ -311,7 +407,7 @@
 
         /* Landscape Mode */
         @media (max-height: 500px) and (orientation: landscape) {
-            .container {
+            .chat-content {
                 padding: 10px;
             }
 
@@ -330,16 +426,9 @@
             }
         }
 
-        /* High DPI Displays */
-        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-            .container {
-                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-            }
-        }
-
         /* Dark Mode Support */
         @media (prefers-color-scheme: dark) {
-            .container {
+            .chat-content {
                 background: #1a1a1a;
                 color: #fff;
             }
@@ -360,9 +449,18 @@
                 background: #1a1a1a;
                 border-top-color: #444;
             }
+
+            /* Ensure text is always readable in dark mode */
+            h1 {
+                color: #fff;
+            }
+
+            .welcome-screen {
+                color: #fff;
+            }
         }
 
-        /* Accessibility Improvements */
+        /* Accessibility */
         button:focus {
             outline: 2px solid #667eea;
             outline-offset: 2px;
@@ -371,12 +469,6 @@
         input[type="text"]:focus {
             outline: 2px solid #667eea;
             outline-offset: 2px;
-        }
-
-        /* Loading States */
-        .loading {
-            opacity: 0.7;
-            pointer-events: none;
         }
 
         /* Scrollbar Styling */
@@ -399,53 +491,60 @@
     </style>
 </head>
 <body>
-    <div class="container" id="mainContainer">
-        <div class="welcome-screen">
-            <h1>Ask anything about Nikhil</h1>
-            <div class="input-group">
-                <input type="text" id="queryInput" placeholder="Ask anything about Nikhil..." />
-                <button onclick="startChat()">Go</button>
+    <div class="full-chat-container" id="mainContainer">
+        <div class="minimize-header" id="minimizeHeader" onclick="toggleMinimize()">
+            <h3>Ask Nikhil</h3>
+            <button class="minimize-toggle" id="minimizeToggle">+</button>
+        </div>
+        
+        <div class="chat-content" id="chatContent">
+            <div class="welcome-screen">
+                <h1>Ask anything about Nikhil</h1>
+                <div class="input-group">
+                    <input type="text" id="queryInput" placeholder="Ask anything about Nikhil..." />
+                    <button onclick="startChat()">Go</button>
+                </div>
             </div>
+            
+            <div class="chat-container" id="chatContainer">
+                <!-- Messages will be added here -->
+            </div>
+            
+            <div class="input-group" id="chatInputGroup" style="display: none;">
+                <input type="text" id="chatInput" placeholder="Ask anything about Nikhil..." />
+                <button onclick="sendMessage()">Send</button>
+            </div>
+            
+            <div class="typing-indicator" id="typingIndicator">Assistant is typing...</div>
         </div>
-        
-        <div class="chat-container" id="chatContainer">
-            <!-- Messages will be added here -->
-        </div>
-        
-        <div class="input-group" id="chatInputGroup" style="display: none;">
-            <input type="text" id="chatInput" placeholder="Ask anything about Nikhil..." />
-            <button onclick="sendMessage()">Send</button>
-        </div>
-        
-        <div class="typing-indicator" id="typingIndicator">Assistant is typing...</div>
     </div>
 
     <script>
         let isChatMode = false;
-        // Update this URL to your deployed Render backend
+        let isMinimized = false;
         const BACKEND_URL = "https://personal-chatbot-assistant.onrender.com";
-        
-        // Chat history for context (last 5 exchanges = 10 messages)
         let chatHistory = [];
 
-        // Prevent zoom on input focus (iOS)
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            preventZoom();
+            handleMobileKeyboard();
+        });
+
         function preventZoom() {
             const inputs = document.querySelectorAll('input[type="text"]');
             inputs.forEach(input => {
                 input.addEventListener('focus', function() {
-                    // Set viewport to prevent zoom
                     const viewport = document.querySelector('meta[name=viewport]');
                     viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
                 });
             });
         }
 
-        // Handle mobile keyboard
         function handleMobileKeyboard() {
             const inputs = document.querySelectorAll('input[type="text"]');
             inputs.forEach(input => {
                 input.addEventListener('focus', function() {
-                    // Scroll to input on mobile
                     setTimeout(() => {
                         input.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }, 300);
@@ -453,12 +552,36 @@
             });
         }
 
+        function toggleMinimize() {
+            const container = document.getElementById('mainContainer');
+            const toggleBtn = document.getElementById('minimizeToggle');
+            
+            isMinimized = !isMinimized;
+            
+            if (isMinimized) {
+                container.classList.add('minimized');
+                toggleBtn.textContent = '+';
+            } else {
+                container.classList.remove('minimized');
+                toggleBtn.textContent = '−';
+                
+                // Focus on input when expanding
+                setTimeout(() => {
+                    if (isChatMode) {
+                        document.getElementById('chatInput').focus();
+                    } else {
+                        document.getElementById('queryInput').focus();
+                    }
+                }, 300);
+            }
+        }
+
         function startChat() {
             const query = document.getElementById('queryInput').value.trim();
             if (!query) return;
 
             // Switch to chat mode
-            document.getElementById('mainContainer').classList.add('chat-mode');
+            document.getElementById('chatContent').classList.add('chat-mode');
             document.getElementById('chatInputGroup').style.display = 'flex';
             document.getElementById('chatInput').value = query;
             
@@ -488,8 +611,10 @@
         async function sendToBackend(query) {
             try {
                 // Add loading state
-                document.getElementById('chatInput').classList.add('loading');
-                document.querySelector('button').classList.add('loading');
+                const input = isChatMode ? document.getElementById('chatInput') : document.getElementById('queryInput');
+                const button = input.nextElementSibling;
+                input.classList.add('loading');
+                button.classList.add('loading');
 
                 const response = await fetch(BACKEND_URL + '/query', {
                     method: 'POST',
@@ -523,17 +648,17 @@
                 addMessage("I apologize, but I'm experiencing technical difficulties at the moment. Please try again shortly.");
             } finally {
                 // Remove loading state
-                document.getElementById('chatInput').classList.remove('loading');
-                document.querySelector('button').classList.remove('loading');
+                const input = isChatMode ? document.getElementById('chatInput') : document.getElementById('queryInput');
+                const button = input.nextElementSibling;
+                input.classList.remove('loading');
+                button.classList.remove('loading');
             }
         }
 
         function updateChatHistory(userMessage, assistantMessage) {
-            // Add the new exchange to chat history
             chatHistory.push({ role: 'user', content: userMessage });
             chatHistory.push({ role: 'assistant', content: assistantMessage });
             
-            // Keep only the last 10 messages (5 exchanges) for context
             if (chatHistory.length > 10) {
                 chatHistory = chatHistory.slice(-10);
             }
@@ -545,7 +670,6 @@
             messageDiv.textContent = content;
             document.getElementById('chatContainer').appendChild(messageDiv);
             
-            // Smooth scroll to bottom
             setTimeout(() => {
                 document.getElementById('chatContainer').scrollTop = document.getElementById('chatContainer').scrollHeight;
             }, 100);
@@ -564,21 +688,24 @@
             }
         });
 
-        // Initialize mobile optimizations
-        document.addEventListener('DOMContentLoaded', function() {
-            preventZoom();
-            handleMobileKeyboard();
-        });
-
         // Handle orientation change
         window.addEventListener('orientationchange', function() {
             setTimeout(() => {
-                // Recalculate layout
                 if (isChatMode) {
                     document.getElementById('chatContainer').scrollTop = document.getElementById('chatContainer').scrollHeight;
                 }
             }, 500);
         });
+
+        // Make functions globally available
+        window.NikhilFullChat = {
+            toggleMinimize,
+            startChat,
+            sendMessage,
+            addMessage,
+            isMinimized: () => isMinimized,
+            isChatMode: () => isChatMode
+        };
     </script>
 </body>
 </html> 
