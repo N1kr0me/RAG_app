@@ -102,7 +102,7 @@ async def process_documents(request: ProcessRequest):
     """Process documents in the data/documents directory"""
     try:
         logger.info("Starting document processing...")
-        chunks = document_processor.process_directory()
+        chunks = document_processor.process_directory(document_processor.documents_path)
         if not chunks:
             logger.warning("No documents found or processed")
             return {"message": "No documents found or processed", "chunks": 0}
