@@ -89,13 +89,37 @@ async def query(request: QueryRequest):
         logger.info(f"Found {len(results)} relevant document chunks")
         context = "\n\n".join([r["content"] for r in results])
 
-        # Prepare messages for OpenAI
+        # Prepare messages for OpenAI with butler personality
         messages = []
+        
+        # Add chat history (last 5 exchanges for context)
         if request.chat_history:
-            messages.extend(request.chat_history)
+            # Keep only the last 10 messages (5 exchanges)
+            recent_history = request.chat_history[-10:] if len(request.chat_history) > 10 else request.chat_history
+            messages.extend(recent_history)
+        
+        # Butler personality system prompt
+        system_prompt = """You are a distinguished butler serving as Nikhil's personal assistant. You embody the following characteristics:
+
+- **Respectful and Professional**: Always address users with courtesy and maintain a formal, yet warm tone
+- **Precise and Concise**: Provide direct, accurate answers to questions asked
+- **Context-Aware**: Remember previous conversation context and build upon it naturally
+- **Character Consistency**: Never break character - always respond as a professional butler
+- **Knowledgeable**: Draw from the provided context about Nikhil's background, skills, and experience
+- **Expansive When Asked**: Only elaborate or provide additional details when specifically requested
+
+When responding:
+- Be direct and to the point initially
+- Use respectful language ("sir", "madam", or simply polite phrasing)
+- If asked to expand, provide comprehensive details
+- Always maintain the butler's professional demeanor
+- Reference specific information from the context when available
+
+Context about Nikhil:"""
+
         messages.append({
             "role": "system",
-            "content": f"Use the following context to answer the question. If you cannot find the answer in the context, say so.\n\nContext:\n{context}"
+            "content": f"{system_prompt}\n\n{context}"
         })
         messages.append({
             "role": "user",
@@ -106,7 +130,7 @@ async def query(request: QueryRequest):
         response = client.chat.completions.create(
             model=OPENAI_MODEL,
             messages=messages,
-            temperature=0.2,
+            temperature=0.3,  # Slightly higher for personality
             max_tokens=512
         )
         answer = response.choices[0].message.content

@@ -51,6 +51,7 @@
             font-size: 1.5em;
             margin-bottom: 20px;
             text-align: center;
+            order: -1; /* Move to top */
         }
 
         .input-group {
@@ -154,9 +155,9 @@
 <body>
     <div class="container" id="mainContainer">
         <div class="welcome-screen">
-            <h1>Hi, I am Nikhil's Assistant. What do you want to know about him?</h1>
-        <div class="input-group">
-                <input type="text" id="queryInput" placeholder="Ask about Nikhil..." />
+            <h1>Ask anything about Nikhil</h1>
+            <div class="input-group">
+                <input type="text" id="queryInput" placeholder="Ask anything about Nikhil..." />
                 <button onclick="startChat()">Go</button>
             </div>
         </div>
@@ -166,7 +167,7 @@
         </div>
         
         <div class="input-group" id="chatInputGroup" style="display: none;">
-            <input type="text" id="chatInput" placeholder="Ask about Nikhil..." />
+            <input type="text" id="chatInput" placeholder="Ask anything about Nikhil..." />
             <button onclick="sendMessage()">Send</button>
         </div>
         
@@ -177,6 +178,9 @@
         let isChatMode = false;
         // Update this URL to your deployed Render backend
         const BACKEND_URL = "https://personal-chatbot-assistant.onrender.com";
+        
+        // Chat history for context (last 5 exchanges = 10 messages)
+        let chatHistory = [];
 
         function startChat() {
             const query = document.getElementById('queryInput').value.trim();
@@ -219,7 +223,7 @@
                     },
                     body: JSON.stringify({
                         query: query,
-                        chat_history: [] // You can add chat history here later
+                        chat_history: chatHistory
                     })
                 });
 
@@ -235,10 +239,24 @@
                 // Add AI response
                 addMessage(data.answer);
                 
+                // Update chat history for context
+                updateChatHistory(query, data.answer);
+                
             } catch (error) {
                 console.error('Error:', error);
                 document.getElementById('typingIndicator').style.display = 'none';
-                addMessage("Sorry, I'm having trouble connecting to the server right now. Please try again later.");
+                addMessage("I apologize, sir/madam, but I'm experiencing technical difficulties at the moment. Please try again shortly.");
+            }
+        }
+
+        function updateChatHistory(userMessage, assistantMessage) {
+            // Add the new exchange to chat history
+            chatHistory.push({ role: 'user', content: userMessage });
+            chatHistory.push({ role: 'assistant', content: assistantMessage });
+            
+            // Keep only the last 10 messages (5 exchanges) for context
+            if (chatHistory.length > 10) {
+                chatHistory = chatHistory.slice(-10);
             }
         }
 
