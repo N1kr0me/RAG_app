@@ -31,6 +31,30 @@ document_processor = DocumentProcessor()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
 
+def initialize_documents():
+    """Process documents on startup"""
+    try:
+        logger.info("Starting automatic document processing on startup...")
+        chunks = document_processor.process_directory(document_processor.documents_path)
+        if chunks:
+            from .embeddings import create_vector_store, load_config
+            config = load_config()
+            create_vector_store(chunks, config["vector_store"]["path"])
+            logger.info(f"✅ Successfully processed {len(chunks)} chunks on startup")
+        else:
+            logger.warning("⚠️ No documents found to process on startup")
+    except Exception as e:
+        logger.error(f"❌ Document processing failed on startup: {e}")
+        # Don't fail the entire service startup, just log the error
+
+# Process documents when the service starts
+@app.on_event("startup")
+async def startup_event():
+    """Run on service startup"""
+    logger.info("🚀 RAG Chatbot Server starting up...")
+    initialize_documents()
+    logger.info("✅ RAG Chatbot Server ready!")
+
 class QueryRequest(BaseModel):
     query: str
     chat_history: Optional[List[dict]] = None
