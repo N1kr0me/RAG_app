@@ -14,13 +14,13 @@ class NoCacheHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     PORT = 3000
     
-    # Change to frontend directory to serve files from there
-    os.chdir('frontend')
+    # Change to frontend/pages directory to serve files from there
+    os.chdir('frontend/pages')
     
     with socketserver.TCPServer(("", PORT), NoCacheHTTPRequestHandler) as httpd:
         print(f"Server running at http://localhost:{PORT}")
-        print("Serving files from frontend/ directory")
-        print("Access your AI Assistant at: http://localhost:3000")
+        print("Serving files from frontend/pages directory")
+        print("Access your AI Assistant at: http://localhost:3000/index.html")
         print("Press Ctrl+C to stop the server")
         try:
             httpd.serve_forever()
